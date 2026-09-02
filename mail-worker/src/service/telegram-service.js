@@ -51,15 +51,16 @@ const telegramService = {
 
 		const jwtToken = await jwtUtils.generateToken(c, { emailId: email.emailId })
 
-		const webAppUrl = customDomain ? `${domainUtils.toOssDomain(customDomain)}/api/telegram/getEmail/${jwtToken}` : 'https://www.cloudflare.com/404'
-		const inlineKeyboard = [
+		// Telegram 频道不接受 web_app 按钮；使用普通 URL 按钮，避免整条通知被 BUTTON_TYPE_INVALID 拒绝。
+		const emailViewUrl = customDomain ? `${domainUtils.toOssDomain(customDomain)}/api/telegram/getEmail/${jwtToken}` : null
+		const inlineKeyboard = emailViewUrl ? [
 			[
 				{
 					text: 'View',
-					web_app: { url: webAppUrl }
+						url: emailViewUrl
 				}
 			]
-		];
+		] : [];
 
 		if (email.code) {
 			inlineKeyboard.push([

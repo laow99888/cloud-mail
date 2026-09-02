@@ -89,6 +89,7 @@ import {cvtR2Url,toOssDomain} from "@/utils/convert.js";
 import {getIconByName} from "@/utils/icon-utils.js";
 import {useSettingStore} from "@/store/setting.js";
 import {allEmailDelete} from "@/request/all-email.js";
+import {emailList} from "@/request/email.js";
 import {useUiStore} from "@/store/ui.js";
 import {useI18n} from "vue-i18n";
 import {EmailUnreadEnum} from "@/enums/email-enum.js";
@@ -119,7 +120,36 @@ onMounted(() => {
     emailRead([email.value.emailId]);
   }
   window.addEventListener('keydown', handleKeyDown);
+  refreshCurrentEmailContent();
 })
+
+// 详情页可能使用了持久化的邮件摘要，打开时重新读取完整内容，避免纯文本邮件显示为空。
+async function refreshCurrentEmailContent() {
+  const emailId = email.value.emailId;
+  if (!emailId || !accountStore.currentAccountId) return;
+
+  try {
+    const result = await emailList(
+      accountStore.currentAccountId,
+      accountStore.currentAccount.allReceive,
+      0,
+      0,
+      50,
+      email.value.type ?? 0,
+      1
+    );
+    const fullEmail = result.list?.find(item => item.emailId === emailId);
+    if (fullEmail) {
+      emailStore.contentData.email = {
+        ...emailStore.contentData.email,
+        ...fullEmail,
+      };
+    }
+  } catch (error) {
+    // 保留已有摘要，完整内容读取失败时不阻断用户查看邮件头部。
+    console.error('读取完整邮件内容失败', error);
+  }
+}
 
 onUnmounted(() => {
   emailStore.contentData.showUnread = false;
